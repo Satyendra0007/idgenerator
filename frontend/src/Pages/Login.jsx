@@ -3,82 +3,129 @@ import { MdEmail } from "react-icons/md";
 import { RiLockPasswordFill } from "react-icons/ri";
 import { useForm } from "react-hook-form"
 import { toast } from 'react-toastify';
-import { useNavigate } from "react-router-dom"
+import { Link, useNavigate } from 'react-router-dom';
 import Spinner from '../Components/Spinner';
-import user from '../images/user.webp'
 import { ContextStore } from '../store/ContextStore';
-import { FaEye } from "react-icons/fa";
-import { FaEyeSlash } from "react-icons/fa";
-import { Link } from 'react-router-dom';
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { sendPostRequest } from '../actions/serverActions';
 
 export default function Login() {
   const navigate = useNavigate()
   const { isLoggedIn, saveToLocalStorage } = useContext(ContextStore)
-  const { register, handleSubmit, watch, formState: { errors, isSubmiting } } = useForm()
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm({
+    mode: 'onTouched',
+  })
   const [loading, setLoading] = useState(false)
   const [show, setShow] = useState(false)
 
+  const fieldWrapperClass = 'flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 transition-colors duration-200 focus-within:border-slate-900'
+  const inputClass = 'w-full border-0 bg-transparent text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none'
+
   useEffect(() => {
-    if (isLoggedIn)
+    if (isLoggedIn) {
       navigate("/dashboard")
-  }, [])
+    }
+  }, [isLoggedIn, navigate])
 
   const handleOnSubmit = async (data) => {
     setLoading(true)
-    const serverResponse = await sendPostRequest(`${import.meta.env.VITE_APP_SERVER_URI}api/auth/login`, data)
-    const response = await serverResponse.json()
-    if (serverResponse.ok) {
+
+    try {
+      const serverResponse = await sendPostRequest(`${import.meta.env.VITE_APP_SERVER_URI}api/auth/login`, data)
+      const response = await serverResponse.json()
+
+      if (!serverResponse.ok) {
+        toast.error(response.message || 'Unable to sign in right now.')
+        return
+      }
+
       saveToLocalStorage(response.token)
       toast.success(response.message)
       navigate("/dashboard")
+    } catch (error) {
+      toast.error('Something went wrong while signing in. Please try again.')
+    } finally {
+      setLoading(false)
     }
-    else {
-      toast.error(response.message)
-    }
-    setLoading(false)
   }
 
   return (
-    <section>
-      <div className="container mx-auto p-2 h-[84vh] flex justify-center items-center relative w-full">
-        {loading && <Spinner />}
-        <div className="box bg-gradient-to-r from-blue-500 to-green-500 min-h-[31rem] w-[19rem] rotate-6 absolute md:w-[36vw] rounded-xl "></div>
-        <div className="form"  >
-          <form onSubmit={handleSubmit(handleOnSubmit)} className='bg-white/30 w-[20rem] px-3 py-10 backdrop-blur-xl space-y-8 rounded-xl md:w-[35vw]'>
-            <h1 className='text-xl font-bold text-center'>LogIn To Your Account </h1>
-            <div className="logo">
-              <img className='w-32 h-32 rounded-full shadow-2xl mx-auto' src={user} alt="" />
-            </div>
-            <div className="email">
-              <div className="input flex items-center gap-x-3">
-                <label className='' htmlFor="email"><MdEmail className='text-green-600' /></label>
-                <input className='outline-none rounded-md border-gray-400 bg-gray-100 w-full border-0 placeholder:text-blue-300 ' type="email" id='email' placeholder='Enter your Email' {...register("email", { required: { value: true, message: "Email is required " } })} />
+    <section className="px-4 py-8 md:py-14">
+      {loading && <Spinner />}
+
+      <div className="mx-auto max-w-md">
+        <div className="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-[0_18px_50px_rgba(15,23,42,0.08)] md:p-8">
+          <div className="mb-8 text-center">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Welcome back</p>
+            <h1 className="mt-3 text-3xl font-bold tracking-tight text-slate-950">Sign in</h1>
+            <p className="mt-3 text-sm leading-6 text-slate-500">
+              Continue to your dashboard and manage student IDs.
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit(handleOnSubmit)} className='space-y-5'>
+            <div>
+              <label className='mb-2 block text-sm font-medium text-slate-700' htmlFor="email">Email address</label>
+              <div className={fieldWrapperClass}>
+                <MdEmail className='text-xl text-slate-400' />
+                <input
+                  className={inputClass}
+                  type="email"
+                  id='email'
+                  placeholder='name@example.com'
+                  aria-invalid={errors.email ? 'true' : 'false'}
+                  {...register("email", {
+                    required: { value: true, message: "Email is required" },
+                  })}
+                />
               </div>
-              <div className="error ml-8">
-                {errors.email && <span className='text-red-600 text-xs font-bold'>{errors.email.message}</span>}
-              </div>
-            </div>
-            <div className="password">
-              <div className="input flex items-center gap-x-3 relative">
-                <label className='' htmlFor="password"><RiLockPasswordFill className='text-green-600' /></label>
-                <input className='outline-none rounded-md border-gray-400 bg-gray-100 w-full border-0 placeholder:text-blue-300 ' type={show ? "text" : "password"} id='password' placeholder='Enter  Password' {...register("password", { required: { value: true, message: "Password is required " }, minLength: { value: 8, message: "Password must have 8 characters" } })} />
-                <span className='absolute top-3 right-4 cursor-pointer text-green-500' onClick={() => setShow(!show)}>
-                  {show ? <FaEye /> : <FaEyeSlash />}</span>
-              </div>
-              <div className="error ml-8">
-                {errors.password && <span className='text-red-600 text-xs font-bold'>{errors.password.message}</span>}
-              </div>
+              {errors.email && <p className='mt-2 text-sm text-rose-600'>{errors.email.message}</p>}
             </div>
 
-            <div className="button flex justify-center items-center flex-col gap-2 ">
-              <button disabled={isSubmiting} type="submit" className='outline-none w-44 py-2 bg-blue-600 text-white font-semibold rounded-md cursor-pointer shadow-2xl hover:bg-blue-700 '>Login</button>
-              <div className="info text-xs text-center "> Don't Have Account ? <Link to="/register" className="text-blue-700 font-bold hover:underline">
-                Register</Link></div>
+            <div>
+              <label className='mb-2 block text-sm font-medium text-slate-700' htmlFor="password">Password</label>
+              <div className={`${fieldWrapperClass} pr-2`}>
+                <RiLockPasswordFill className='text-xl text-slate-400' />
+                <input
+                  className={inputClass}
+                  type={show ? "text" : "password"}
+                  id='password'
+                  placeholder='Enter your password'
+                  aria-invalid={errors.password ? 'true' : 'false'}
+                  {...register("password", {
+                    required: { value: true, message: "Password is required" },
+                    minLength: { value: 8, message: "Password must have at least 8 characters" },
+                  })}
+                />
+                <button
+                  type="button"
+                  className='grid h-9 w-9 place-items-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800'
+                  onClick={() => setShow((prev) => !prev)}
+                  aria-label={show ? 'Hide password' : 'Show password'}
+                >
+                  {show ? <FaEye /> : <FaEyeSlash />}
+                </button>
+              </div>
+              {errors.password && <p className='mt-2 text-sm text-rose-600'>{errors.password.message}</p>}
             </div>
+
+            <button
+              disabled={loading || isSubmitting}
+              type="submit"
+              className='w-full rounded-xl bg-slate-950 px-6 py-3 text-sm font-semibold text-white transition-colors duration-200 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70'
+            >
+              {loading || isSubmitting ? 'Signing in...' : 'Sign in'}
+            </button>
+
+            <p className="text-center text-sm text-slate-500">
+              Don&apos;t have an account?{' '}
+              <Link to="/register" className="font-semibold text-slate-900 hover:underline">
+                Create account
+              </Link>
+            </p>
           </form>
         </div>
-      </div >
-    </section >
+      </div>
+    </section>
   )
 }
